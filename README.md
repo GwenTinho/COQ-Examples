@@ -1,1 +1,1 @@
-# COQ-Examples
+# Examples-COQ-Prolog
