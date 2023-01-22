@@ -141,10 +141,10 @@ Qed.
 
 
 Theorem sqrt2_infinite_descent: forall p q,
- q <> 0 -> p*p = 2*q*q -> exists pp qq : nat,
- pp * pp = 2 * qq * qq /\ qq < q.
+  (q <> 0 /\ p*p = 2*q*q) -> exists pp qq : nat,
+ (qq <> 0 /\ pp * pp = 2 * qq * qq) /\ qq < q.
 Proof.
-  intros p q qnz eq.
+  intros p q [qnz eq].
   assert (eq' := eq).
 
   assert (Nat.even (p*p) = true).
@@ -193,31 +193,53 @@ Proof.
 
   assert (q > q').
   lia.
-  clear Hp' Hq'.
 
   exists p'.
   exists q'.
-
   split.
-  - apply eq.
-  - apply H.
+  split.
+  rewrite <- Hq' in qnz.
+  lia.
+  apply eq.
+  apply H.
 Qed.
 
 Definition lt_nat (p q : nat*nat) := snd p < snd q.
 
 Theorem lt_wf: well_founded lt_nat.
 Proof.
-  unfold well_founded.
+  apply (well_founded_lt_compat (nat*nat) snd).
   intros.
-
-Admitted.
-
-Theorem infinite_descent: forall P : Prop -> forall p q : nat,
-  (P p q) -> exists p' q' : nat, (f p' q') /\ q' < q ->.
-Proof.
+  unfold lt_nat in H.
+  apply H.
 
 Qed.
 
+Theorem infinite_descent: forall f : nat -> nat -> Prop,
+  (forall p q : nat, ((f p q) -> exists p' q' : nat, (f p' q') /\ q' < q)) ->
+  forall r s : nat, ~(f r s).
+Proof.
+  intros f H.
+  intros r s.
+  pose (rs := (r,s)).
+  replace r with (fst rs); try reflexivity.
+  replace s with (snd rs); try reflexivity.
+  apply (well_founded_ind lt_wf (fun x => ~(f (fst x) (snd x)))).
+  intros.
+  specialize (H (fst x) (snd x)).
+  unfold not.
+  intros HA.
+  apply H in HA.
+  destruct HA as [A HA].
+  destruct HA as [B HA].
+  specialize (H0 (A,B)).
+  unfold lt_nat in H0.
+  destruct HA.
+  simpl in H0.
+  apply H0 in H2.
+  apply H2.
+  apply H1.
+Qed.
 
 Theorem sqrt2_is_irrational: forall p q: nat,
   q <> 0 -> p*p <> 2*q*q.
@@ -225,20 +247,26 @@ Proof.
   intros p q qnz.
   unfold not.
   intros eq.
+  specialize (infinite_descent (fun (p q : nat) => q <> 0 /\ p * p = 2 * q * q)).
+  intros id.
+  simpl in id.
   generalize sqrt2_infinite_descent.
   intros.
-  specialize (H p q).
-  apply H in qnz.
-  destruct qnz.
-  destruct H0.
-  destruct H0.
-  2 : {
-    apply eq.
+  simpl in H.
+  assert (forall r s : nat, ~(s <> 0 /\ r * r = (s + (s + 0)) * s)).
+  {
+    apply id.
+    apply H.
   }
-  clear H.
 
-
+  specialize (H0 p q).
+  unfold not in H0.
+  destruct H0.
+  split.
+  apply qnz.
+  apply eq.
 
 Qed.
+
 
   Set Printing All
